@@ -1,6 +1,7 @@
 import React from 'react'
 import { useSyncExternalStore } from 'react'
-import { ThemeProvider } from '@memex/common/features/ui-theme/provider'
+import { resolveProductThemeForColorTheme } from '~/utils/product-theme-bootstrap'
+import { MemexThemeProvider } from '~/features/ui-theme/memex-theme-provider'
 import { FontLoader } from '@memex/common/features/ui-theme/font-loader'
 import { GlobalStyle } from '@memex/common/features/ui-theme/global-styles'
 import type {
@@ -162,18 +163,23 @@ export const ObsidianRuntimeProvider: React.FC<
     React.PropsWithChildren<{ runtime: ObsidianRuntime }>
 > = ({ runtime, children }) => {
     const contextValue = useRuntimeContextValue(runtime)
+    const productTheme = resolveProductThemeForColorTheme({
+        settings: contextValue.globalState.productThemeSettings,
+        colorTheme: contextValue.globalState.colorTheme,
+    })
 
     return (
-        <ThemeProvider
+        <MemexThemeProvider
             theme={contextValue.globalState.colorTheme}
             defaultTheme="dark"
-            icons={contextValue.services.icons.getAllIconURLs()}
+            productTheme={productTheme}
+            iconsService={contextValue.services.icons}
         >
             <FontLoader />
             <GlobalStyle />
             <ExtUIContext.Provider value={contextValue}>
                 <OverlayProvider>{children}</OverlayProvider>
             </ExtUIContext.Provider>
-        </ThemeProvider>
+        </MemexThemeProvider>
     )
 }
