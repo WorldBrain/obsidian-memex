@@ -770,12 +770,12 @@ Option 2: Install and provide the "ws" package:
     }
 `,ece="56px",SR="112px",tce="44px",nce=t=>{const e=Re.c(21),n=typeof t.title=="string"?t.title:void 0;let r;e[0]!==t?(r=t.rightAction??(t.onClose?w.jsx(ut,{icon:"removeX",type:"secondary",size:"sm",borderRadius:"full",ariaLabel:t.closeAriaLabel??"Close",onClick:h=>{h.stopPropagation(),t.onClose?.()}}):null)??(t.onForward?w.jsx(ut,{icon:"arrowRight",type:"tertiary",size:"sm",borderRadius:"sm",ariaLabel:t.forwardAriaLabel??"Forward",isDisabled:t.canGoForward===!1,onClick:h=>{h.stopPropagation(),t.onForward?.()}}):null),e[0]=t,e[1]=r):r=e[1];const i=r;let s;e[2]!==t?(s=t.leftAction??(t.hideBackButton?null:w.jsx(ut,{icon:"arrowLeft",type:"secondary",size:"sm",borderRadius:"full",ariaLabel:t.backAriaLabel??"Back",isDisabled:t.canGoBack===!1,onClick:h=>{h.stopPropagation(),t.onBack()}})),e[2]=t,e[3]=s):s=e[3];let o;e[4]!==s?(o=w.jsx(TR,{children:s}),e[4]=s,e[5]=o):o=e[5];let a;e[6]!==t.isLoadingTitle||e[7]!==t.title||e[8]!==t.titleIconUrl?(a=t.isLoadingTitle?w.jsx(ace,{"aria-label":"Loading title",children:w.jsx(_r,{size:16,margin:"0"})}):w.jsxs(w.Fragment,{children:[t.titleIconUrl?w.jsx(sce,{src:t.titleIconUrl,alt:"","aria-hidden":"true"}):null,w.jsx(oce,{children:t.title})]}),e[6]=t.isLoadingTitle,e[7]=t.title,e[8]=t.titleIconUrl,e[9]=a):a=e[9];let l;e[10]!==t.titleAlignment||e[11]!==t.titleFont||e[12]!==a||e[13]!==n?(l=w.jsx(ice,{title:n,$titleFont:t.titleFont,$titleAlignment:t.titleAlignment,children:a}),e[10]=t.titleAlignment,e[11]=t.titleFont,e[12]=a,e[13]=n,e[14]=l):l=e[14];let u;e[15]!==i?(u=w.jsx(TR,{$align:"right",children:i}),e[15]=i,e[16]=u):u=e[16];let d;return e[17]!==o||e[18]!==l||e[19]!==u?(d=w.jsxs(rce,{children:[o,l,u]}),e[17]=o,e[18]=l,e[19]=u,e[20]=d):d=e[20],d};R(ut)`
     && {
-        width: 100%;
+        width: ${({$isPhoneFooter:t,$phoneActionSizing:e})=>t&&e==="content"?"auto":"100%"};
         min-width: 0;
         padding: ${({theme:t,$isPhoneFooter:e})=>e?`${t.spacing[1]} ${t.spacing[2]}`:`0 ${t.spacing[1]}`};
     }
 
-    ${({theme:t,$iconBackgroundColor:e})=>e?fe`
+    ${({theme:t,$iconBackgroundColor:e,$iconForegroundColor:n})=>e?fe`
                   .MemexIcons {
                       width: 24px;
                       height: 24px;
@@ -786,8 +786,8 @@ Option 2: Install and provide the "ws" package:
                       background: ${e};
                   }
 
-                  .MemexIcons > div {
-                      background-color: ${t.colors.greyScale0};
+                  && .MemexIcons:not([data-memex-original-image='true']) > div {
+                      background-color: ${n??t.colors.greyScale0};
                       filter: none;
                   }
               `:""}
@@ -939,8 +939,8 @@ Option 2: Install and provide the "ws" package:
     justify-content: center;
     min-width: 0;
 
-    ${({$variant:t})=>t==="phoneFooter"?fe`
-                  flex: 1 1 0;
+    ${({$variant:t,$phoneActionSizing:e})=>t==="phoneFooter"?fe`
+                  flex: ${e==="content"?"0 0 auto":"1 1 0"};
                   min-width: 0;
               `:fe`
                   flex: 0 0 auto;
