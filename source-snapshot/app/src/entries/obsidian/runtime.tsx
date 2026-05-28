@@ -1,6 +1,10 @@
 import React from 'react'
 import { useSyncExternalStore } from 'react'
-import { resolveProductThemeForColorTheme } from '~/utils/product-theme-bootstrap'
+import { StyleSheetManager } from 'styled-components'
+import {
+    normalizeLocalProductThemeSettings,
+    resolveProductThemeForColorTheme,
+} from '~/utils/product-theme-bootstrap'
 import { MemexThemeProvider } from '~/features/ui-theme/memex-theme-provider'
 import { FontLoader } from '@memex/common/features/ui-theme/font-loader'
 import { GlobalStyle } from '@memex/common/features/ui-theme/global-styles'
@@ -13,6 +17,8 @@ import { OverlayProvider } from '~/features/in-page-ui/ui/overlay-provider'
 import { getObsidianHostedAuthUrl } from '~/features/obsidian/sidebar-iframe-bridge'
 import type { OptionsContextType } from '~/options-script/types'
 import { ExtUIContext } from '~/ui-scripts/context-provider'
+import type { UITheme } from '~/utils/ui-theme-bootstrap'
+import { OBSIDIAN_INLINE_RESULT_CARD_ICONS } from './inline-result-card-icons'
 
 export interface ObsidianRuntimeContextValue extends Omit<
     OptionsContextType,
@@ -23,6 +29,7 @@ export interface ObsidianRuntimeContextValue extends Omit<
 
 export interface ObsidianRuntimeOptions {
     resolveRuntimeUrl?: (path: string) => string | null
+    initialTheme?: UITheme
 }
 
 export class ObsidianRuntime {
@@ -30,8 +37,11 @@ export class ObsidianRuntime {
     private context: OptionsContextType | null = null
     private stateListeners = new Set<() => void>()
     private restoreSetState: (() => void) | null = null
+    private hostTheme: UITheme
 
-    constructor(private options: ObsidianRuntimeOptions = {}) {}
+    constructor(private options: ObsidianRuntimeOptions = {}) {
+        this.hostTheme = options.initialTheme ?? 'dark'
+    }
 
     async ensureContext(): Promise<OptionsContextType> {
         if (this.context != null) {
@@ -47,15 +57,26 @@ export class ObsidianRuntime {
         const context = await setupWebPlatformContext({
             disableExtensionAuthSync: true,
             disableSystemThemeDetection: true,
-            initialTheme: 'dark',
+            disablePersistedThemeBootstrap: true,
+            disableDocumentThemeBootstrap: true,
+            initialTheme: this.hostTheme,
             resolveRuntimeUrl: this.options.resolveRuntimeUrl,
+            inlineIcons: OBSIDIAN_INLINE_RESULT_CARD_ICONS,
         })
 
         await context.globalLogic.initialize()
+        this.applyHostColorThemeToContext(context)
         this.attachStateListener(context)
         this.context = context
 
         return context
+    }
+
+    private applyHostColorThemeToContext(context: OptionsContextType): void {
+        context.globalLogic.setState({
+            colorTheme: this.hostTheme,
+            colorThemePreference: this.hostTheme,
+        })
     }
 
     private attachStateListener(context: OptionsContextType): void {
@@ -100,6 +121,15 @@ export class ObsidianRuntime {
             throw new Error('Obsidian runtime has not been initialized')
         }
         return this.context.globalLogic.state
+    }
+
+    setHostColorTheme(theme: UITheme): void {
+        this.hostTheme = theme
+        if (this.context == null) {
+            return
+        }
+
+        this.applyHostColorThemeToContext(this.context)
     }
 
     async startOAuthLogin(): Promise<string | null> {
@@ -160,26 +190,45 @@ function useRuntimeContextValue(
 }
 
 export const ObsidianRuntimeProvider: React.FC<
-    React.PropsWithChildren<{ runtime: ObsidianRuntime }>
-> = ({ runtime, children }) => {
+    React.PropsWithChildren<{
+        runtime: ObsidianRuntime
+        isolationRoot?: ShadowRoot
+    }>
+> = ({ runtime, isolationRoot, children }) => {
     const contextValue = useRuntimeContextValue(runtime)
     const productTheme = resolveProductThemeForColorTheme({
-        settings: contextValue.globalState.productThemeSettings,
+        settings: normalizeLocalProductThemeSettings(
+            contextValue.globalState.productThemeSettings,
+        ),
         colorTheme: contextValue.globalState.colorTheme,
     })
 
-    return (
+    const content = (
         <MemexThemeProvider
             theme={contextValue.globalState.colorTheme}
             defaultTheme="dark"
             productTheme={productTheme}
             iconsService={contextValue.services.icons}
+            cssVariableTarget={isolationRoot}
         >
             <FontLoader />
             <GlobalStyle />
-            <ExtUIContext.Provider value={contextValue}>
+            <ExtUIContext.Provider
+                value={{
+                    ...contextValue,
+                    shadowRoot: isolationRoot,
+                }}
+            >
                 <OverlayProvider>{children}</OverlayProvider>
             </ExtUIContext.Provider>
         </MemexThemeProvider>
+    )
+
+    if (isolationRoot == null) {
+        return content
+    }
+
+    return (
+        <StyleSheetManager target={isolationRoot}>{content}</StyleSheetManager>
     )
 }

@@ -227,7 +227,19 @@ export const ObsidianSidebarSurface: React.FC<ObsidianSidebarSurfaceProps> = ({
     )
 
     return (
-        <div className="memex-obsidian-sidebar-host">
+        <div
+            className="memex-obsidian-sidebar-host"
+            style={{
+                position: 'relative',
+                display: 'flex',
+                flex: 1,
+                width: '100%',
+                height: '100%',
+                minHeight: 0,
+                overflow: 'hidden',
+                background: 'var(--background-primary)',
+            }}
+        >
             <iframe
                 ref={handleIframeRef}
                 className="memex-obsidian-sidebar-iframe"
@@ -235,6 +247,13 @@ export const ObsidianSidebarSurface: React.FC<ObsidianSidebarSurfaceProps> = ({
                 title="Memex Sidebar"
                 allow="clipboard-write"
                 onLoad={handleIframeLoad}
+                style={{
+                    flex: 1,
+                    width: '100%',
+                    height: '100%',
+                    border: 0,
+                    background: 'transparent',
+                }}
             />
         </div>
     )

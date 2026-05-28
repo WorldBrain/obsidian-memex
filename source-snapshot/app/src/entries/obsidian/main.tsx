@@ -18,6 +18,7 @@ import { ObsidianSidebarSessionCache } from './sidebar-session-cache'
 import { ObsidianAuthSessionPersistence } from './auth-session-persistence'
 import { MEMEX_OBSIDIAN_VIEW_TYPE, MemexSidebarView } from './view'
 import { openExternalUrlInObsidianHost } from './external-url'
+import { getObsidianColorTheme } from './theme'
 import {
     formatDroppedMemexResultCardCodeBlock,
     getEditorPositionAfterInsertedText,
@@ -84,6 +85,8 @@ class CallbackUrlModal extends Modal {
 
 class ResultCardRenderChild extends MarkdownRenderChild {
     private root: Root | null = null
+    private shadowHost: HTMLDivElement | null = null
+    private shadowRoot: ShadowRoot | null = null
     private stopContainerClickHandling: (() => void) | null = null
 
     constructor(
@@ -97,11 +100,24 @@ class ResultCardRenderChild extends MarkdownRenderChild {
 
     async onload(): Promise<void> {
         await this.runtime.ensureContext()
-        this.root = createRoot(this.containerEl)
+        const shadowHost = document.createElement('div')
+        shadowHost.className = 'memex-obsidian-result-card-shadow-host'
+        shadowHost.style.display = 'block'
+        shadowHost.style.margin = '1rem 0'
+        const shadowRoot = shadowHost.attachShadow({ mode: 'open' })
+        const mountEl = document.createElement('div')
+        mountEl.style.display = 'block'
+        shadowRoot.appendChild(mountEl)
+        this.containerEl.replaceChildren(shadowHost)
+        this.shadowHost = shadowHost
+        this.shadowRoot = shadowRoot
+
+        this.root = createRoot(mountEl)
         this.root.render(
             <ObsidianResultCardBlock
                 runtime={this.runtime}
                 source={this.source}
+                isolationRoot={shadowRoot}
                 onOpenExternalUrl={(url) => this.plugin.openExternalUrl(url)}
                 onOpenNotes={(params) =>
                     this.plugin.openSearchNotesInSidebar(params)
@@ -116,15 +132,12 @@ class ResultCardRenderChild extends MarkdownRenderChild {
         this.stopContainerClickHandling = null
         this.root?.unmount()
         this.root = null
+        this.shadowHost?.remove()
+        this.shadowHost = null
+        this.shadowRoot = null
     }
 
-    private findInteractiveAncestorWithinContainer(
-        target: HTMLElement | null,
-    ): HTMLElement | null {
-        if (target == null) {
-            return null
-        }
-
+    private hasInteractiveTarget(event: MouseEvent): boolean {
         const interactiveTargetSelector = [
             'a[href]',
             'button',
@@ -139,31 +152,21 @@ class ResultCardRenderChild extends MarkdownRenderChild {
             '[data-testid="mobile-action-sheet-panel"]',
         ].join(',')
 
-        let current: HTMLElement | null = target
-        while (current != null && current !== this.containerEl) {
-            if (current.matches(interactiveTargetSelector)) {
-                return current
-            }
-            current = current.parentElement
-        }
-
-        return null
+        return event.composedPath().some((target) => {
+            return (
+                target instanceof HTMLElement &&
+                target.matches(interactiveTargetSelector)
+            )
+        })
     }
 
     private registerContainerClickHandling(): () => void {
         const handleContainerClick = (event: MouseEvent) => {
-            const target = event.target as HTMLElement | null
-            const matchedInteractiveAncestor =
-                this.findInteractiveAncestorWithinContainer(target)
-            if (target == null) {
+            if (this.hasInteractiveTarget(event)) {
                 return
             }
 
-            if (matchedInteractiveAncestor != null) {
-                return
-            }
-
-            const resultCardBlock = this.containerEl.querySelector(
+            const resultCardBlock = this.shadowRoot?.querySelector(
                 '.memex-obsidian-result-card-block',
             ) as HTMLElement | null
 
@@ -261,6 +264,7 @@ export default class MemexObsidianPlugin extends Plugin {
     public settings: MemexObsidianSettings = DEFAULT_SETTINGS
     private readonly runtime = new ObsidianRuntime({
         resolveRuntimeUrl: (path) => this.resolveRuntimeUrl(path),
+        initialTheme: getObsidianColorTheme(),
     })
     private readonly sidebarSessionCache = new ObsidianSidebarSessionCache({
         runtime: this.runtime,
@@ -283,6 +287,8 @@ export default class MemexObsidianPlugin extends Plugin {
     }
 
     async onload(): Promise<void> {
+        this.syncObsidianTheme()
+        this.registerStartupThemeSync()
         await this.loadSettings()
         const authSessionPersistence = this.getAuthSessionPersistence()
         await authSessionPersistence.restoreSession()
@@ -329,6 +335,12 @@ export default class MemexObsidianPlugin extends Plugin {
             }),
         )
 
+        this.registerEvent(
+            this.app.workspace.on('css-change', () => {
+                this.syncObsidianTheme()
+            }),
+        )
+
         this.registerObsidianProtocolHandler(
             OAUTH_PROTOCOL_ACTION,
             (params) => {
@@ -348,6 +360,34 @@ export default class MemexObsidianPlugin extends Plugin {
                 context.addChild(child)
             },
         )
+    }
+
+    private syncObsidianTheme(): void {
+        this.runtime.setHostColorTheme(getObsidianColorTheme())
+    }
+
+    private registerStartupThemeSync(): void {
+        this.app.workspace.onLayoutReady?.(() => {
+            this.syncObsidianTheme()
+        })
+
+        const requestAnimationFrameId = window.requestAnimationFrame(() => {
+            this.syncObsidianTheme()
+        })
+        this.register(() => {
+            window.cancelAnimationFrame(requestAnimationFrameId)
+        })
+
+        const timeoutIds = [0, 100, 500].map((delay) =>
+            window.setTimeout(() => {
+                this.syncObsidianTheme()
+            }, delay),
+        )
+        this.register(() => {
+            timeoutIds.forEach((timeoutId) => {
+                window.clearTimeout(timeoutId)
+            })
+        })
     }
 
     async onunload(): Promise<void> {

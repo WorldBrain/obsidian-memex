@@ -80,9 +80,10 @@ describe('ObsidianSidebarSessionCache', () => {
 
         const overlayHost =
             document.body.querySelector<HTMLDivElement>(OVERLAY_SELECTOR)
-        const firstIframe = overlayHost?.querySelector('iframe')
+        const firstIframe = overlayHost?.shadowRoot?.querySelector('iframe')
 
         expect(firstIframe).not.toBeNull()
+        expect(overlayHost?.querySelector('iframe')).toBeNull()
         expect(firstContainer.querySelector('iframe')).toBeNull()
         expect(mountCount).toBe(1)
         expect(unmountCount).toBe(0)
@@ -103,7 +104,7 @@ describe('ObsidianSidebarSessionCache', () => {
             cache.attach(secondContainer)
         })
 
-        const secondIframe = overlayHost?.querySelector('iframe')
+        const secondIframe = overlayHost?.shadowRoot?.querySelector('iframe')
         expect(secondIframe).toBe(firstIframe)
         expect(secondContainer.querySelector('iframe')).toBeNull()
         expect(mountCount).toBe(1)

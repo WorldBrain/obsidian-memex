@@ -71,20 +71,7 @@ function getContentEntityFromCache(params: {
     contentEntitiesById: Record<string, ContentEntity>
     id: string
 }): ContentEntity | undefined {
-    return (
-        params.contentEntitiesById[params.id] ??
-        Object.values(params.contentEntitiesById).find((entity) => {
-            const runtimeEntity = entity as ContentEntity & {
-                content_id?: string
-                userLibraryId?: string
-            }
-
-            return (
-                runtimeEntity.content_id === params.id ||
-                runtimeEntity.userLibraryId === params.id
-            )
-        })
-    )
+    return params.contentEntitiesById[params.id]
 }
 
 function stripSearchMetadataFromEntity(

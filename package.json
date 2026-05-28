@@ -1,7 +1,7 @@
 {
     "name": "obsidian-memex-release",
     "private": true,
-    "version": "2026.05.100",
+    "version": "2026.05.260",
     "type": "module",
     "scripts": {
         "sync:public-files": "node scripts/sync-public-files.mjs",

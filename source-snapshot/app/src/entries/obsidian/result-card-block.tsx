@@ -254,12 +254,13 @@ const RenderedResultCard: React.FC<{
 export const ObsidianResultCardBlock: React.FC<{
     runtime: ObsidianRuntime
     source: string
+    isolationRoot?: ShadowRoot
     onOpenExternalUrl: (url: string) => Promise<void> | void
     onOpenNotes: (params: {
         contentEntityId: string
         title: string
     }) => Promise<void>
-}> = ({ runtime, source, onOpenExternalUrl, onOpenNotes }) => {
+}> = ({ runtime, source, isolationRoot, onOpenExternalUrl, onOpenNotes }) => {
     const payload = React.useMemo(
         () => parseMemexResultCardPayload(source),
         [source],
@@ -274,7 +275,10 @@ export const ObsidianResultCardBlock: React.FC<{
     }
 
     return (
-        <ObsidianRuntimeProvider runtime={runtime}>
+        <ObsidianRuntimeProvider
+            runtime={runtime}
+            isolationRoot={isolationRoot}
+        >
             <PayloadScopedContext
                 entity={payload.entity}
                 tagEntities={payload.tagEntities}

@@ -20,6 +20,7 @@ export interface ObsidianSidebarSessionCacheOptions {
 export class ObsidianSidebarSessionCache {
     private overlayHost: HTMLDivElement | null = null
     private surfaceRoot: HTMLDivElement | null = null
+    private shadowRoot: ShadowRoot | null = null
     private root: Root | null = null
     private activeContainer: HTMLElement | null = null
     private resizeObserver: ResizeObserver | null = null
@@ -76,6 +77,7 @@ export class ObsidianSidebarSessionCache {
 
         this.overlayHost?.remove()
         this.overlayHost = null
+        this.shadowRoot = null
 
         this.sendHostMessage = null
         this.pendingHostMessages = []
@@ -99,19 +101,25 @@ export class ObsidianSidebarSessionCache {
         overlayHost.style.visibility = 'hidden'
         overlayHost.style.background = 'var(--background-primary)'
 
+        const shadowRoot = overlayHost.attachShadow({ mode: 'open' })
         const surfaceRoot = document.createElement('div')
         surfaceRoot.className = 'memex-obsidian-sidebar-root'
+        surfaceRoot.style.display = 'flex'
         surfaceRoot.style.height = '100%'
+        surfaceRoot.style.minHeight = '0'
         surfaceRoot.style.width = '100%'
-        overlayHost.appendChild(surfaceRoot)
+        surfaceRoot.style.overflow = 'hidden'
+        shadowRoot.appendChild(surfaceRoot)
 
         document.body.appendChild(overlayHost)
+
+        this.overlayHost = overlayHost
+        this.surfaceRoot = surfaceRoot
+        this.shadowRoot = shadowRoot
 
         const root = createRoot(surfaceRoot)
         root.render(this.renderSurface())
 
-        this.overlayHost = overlayHost
-        this.surfaceRoot = surfaceRoot
         this.root = root
     }
 
